@@ -15,14 +15,15 @@ export function LiveInputPanel({ onEmotionChange, isActive, onActiveChange, auto
   const { videoRef, detectionState, startDetection, stopDetection } = useFaceDetection(onEmotionChange);
   const hasAutoStarted = useRef(false);
 
-  // Auto-start camera when component mounts if autoStart is true
+  // Auto-start camera immediately on mount
   useEffect(() => {
-    if (autoStart && !hasAutoStarted.current && detectionState.status === "idle") {
+    if (autoStart && !hasAutoStarted.current) {
       hasAutoStarted.current = true;
       onActiveChange(true);
       startDetection();
     }
-  }, [autoStart, detectionState.status, onActiveChange, startDetection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStart = async () => {
     onActiveChange(true);
