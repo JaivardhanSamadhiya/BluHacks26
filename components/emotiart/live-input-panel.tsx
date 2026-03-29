@@ -1,16 +1,28 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useLiveAnalysis } from "@/hooks/useLiveAnalysis";
 import type { AnalysisResult } from "@/hooks/useLiveAnalysis";
-import type { EmotionKey } from "@/lib/emotiart-types";
 
 interface LiveInputPanelProps {
   onResult: (result: AnalysisResult) => void;
   onActiveChange: (active: boolean) => void;
+  autoStart?: boolean;
 }
 
-export function LiveInputPanel({ onResult, onActiveChange }: LiveInputPanelProps) {
+export function LiveInputPanel({ onResult, onActiveChange, autoStart = false }: LiveInputPanelProps) {
   const { videoRef, transcript, status, error, startAnalysis, stopAnalysis } = useLiveAnalysis(onResult);
+  const hasAutoStarted = useRef(false);
+
+  // Auto-start camera immediately on mount if autoStart is true
+  useEffect(() => {
+    if (autoStart && !hasAutoStarted.current) {
+      hasAutoStarted.current = true;
+      onActiveChange(true);
+      startAnalysis();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStart = async () => {
     onActiveChange(true);

@@ -7,73 +7,71 @@ import { VisualGuidePanel } from "@/components/emotiart/visual-guide-panel";
 import { ArtCanvas } from "@/components/emotiart/art-canvas";
 import { EmotionKey } from "@/lib/emotiart-types";
 
-const emotionKeywords: Record<EmotionKey, string[]> = {
-  happy: ["happy", "joy", "excited", "great", "wonderful", "amazing", "love", "glad", "delighted", "cheerful", "fantastic", "awesome", "thrilled", "pleased", "elated"],
-  calm: ["calm", "peaceful", "relaxed", "serene", "tranquil", "content", "gentle", "quiet", "still", "composed", "centered", "mindful", "balanced"],
-  sad: ["sad", "unhappy", "depressed", "down", "melancholy", "gloomy", "sorrowful", "heartbroken", "disappointed", "lonely", "grief", "crying", "tears"],
-  angry: ["angry", "mad", "furious", "rage", "irritated", "annoyed", "frustrated", "outraged", "livid", "hostile", "hate", "disgusted"],
-  anxious: ["anxious", "worried", "nervous", "stressed", "tense", "uneasy", "fearful", "panic", "dread", "apprehensive", "restless", "scared"],
-  excited: ["excited", "thrilled", "eager", "enthusiastic", "hyped", "pumped", "energized", "animated", "vibrant", "passionate", "exhilarated"],
-  overwhelmed: ["overwhelmed", "overloaded", "swamped", "drowning", "exhausted", "burnt", "chaos", "too much", "cant handle", "breaking down", "pressure"],
-};
-
-function analyzeText(text: string): { emotion: EmotionKey; confidence: number } {
-  const lowerText = text.toLowerCase();
-  const scores: Record<EmotionKey, number> = {
-    happy: 0,
-    calm: 0,
-    sad: 0,
-    angry: 0,
-    anxious: 0,
-    excited: 0,
-    overwhelmed: 0,
-  };
-
-  let totalMatches = 0;
-
-  for (const [emotion, keywords] of Object.entries(emotionKeywords)) {
-    for (const keyword of keywords) {
-      const regex = new RegExp(`\\b${keyword}\\b`, "gi");
-      const matches = lowerText.match(regex);
-      if (matches) {
-        scores[emotion as EmotionKey] += matches.length;
-        totalMatches += matches.length;
-      }
-    }
-  }
-
-  let topEmotion: EmotionKey = "calm";
-  let topScore = 0;
-
-  for (const [emotion, score] of Object.entries(scores)) {
-    if (score > topScore) {
-      topScore = score;
-      topEmotion = emotion as EmotionKey;
-    }
-  }
-
-  const confidence = totalMatches > 0 ? Math.min((topScore / totalMatches) * 100, 100) : 0;
-
-  return { emotion: topEmotion, confidence: Math.round(confidence) };
-}
-
 export default function TextAnalysisPage() {
   const [text, setText] = useState("");
   const [activeEmotion, setActiveEmotion] = useState<EmotionKey>("calm");
   const [confidence, setConfidence] = useState(0);
   const [isGenerated, setIsGenerated] = useState(false);
   const [generationKey, setGenerationKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const canvasRef = useRef<{ regenerate: () => void; download: () => void }>(null);
 
-  const handleAnalyze = useCallback(() => {
+  const handleAnalyze = useCallback(async () => {
     if (!text.trim()) return;
 
-    const result = analyzeText(text);
-    setActiveEmotion(result.emotion);
-    setConfidence(result.confidence);
-    setIsGenerated(true);
-    setGenerationKey((prev) => prev + 1);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to analyze text");
+      }
+
+      const result = await response.json();
+      
+      // Map the API response emotion to frontend EmotionKey
+      const emotionMap: Record<string, EmotionKey> = {
+        happy: "happy",
+        calm: "calm",
+        sad: "sad",
+        angry: "angry",
+        anxious: "anxious",
+        excited: "excited",
+        overwhelmed: "overwhelmed",
+        joy: "happy",
+        sadness: "sad",
+        anger: "angry",
+        fear: "anxious",
+        tension: "anxious",
+        confusion: "anxious",
+        love: "happy",
+        gratitude: "happy",
+        hope: "excited",
+      };
+
+      const frontendEmotion = result.frontend_emotion || result.dominant_emotion;
+      const mappedEmotion: EmotionKey = emotionMap[frontendEmotion] || "calm";
+      
+      setActiveEmotion(mappedEmotion);
+      setConfidence(result.confidence || 50);
+      setIsGenerated(true);
+      setGenerationKey((prev) => prev + 1);
+    } catch (err) {
+      console.error("Error analyzing text:", err);
+      setError("Failed to analyze text. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }, [text]);
 
   return (
@@ -115,12 +113,44 @@ export default function TextAnalysisPage() {
           />
           <VisualGuidePanel />
 
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           <button
             onClick={handleAnalyze}
-            disabled={!text.trim()}
-            className="w-full h-11 bg-white text-black font-sans font-semibold text-sm rounded-lg hover:opacity-88 active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!text.trim() || isLoading}
+            className="w-full h-11 bg-white text-black font-sans font-semibold text-sm rounded-lg hover:opacity-88 active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Analyze Text
+            {isLoading ? (
+              <>
+                <svg
+                  className="animate-spin h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Analyzing...
+              </>
+            ) : (
+              "Analyze Text"
+            )}
           </button>
         </aside>
       </main>
