@@ -5,6 +5,7 @@ import { LiveInputPanel } from "@/components/emotiart/live-input-panel";
 import { EmotionDetectionPanel } from "@/components/emotiart/emotion-detection-panel";
 import { VisualGuidePanel } from "@/components/emotiart/visual-guide-panel";
 import { ArtCanvas } from "@/components/emotiart/art-canvas";
+import { Navbar } from "@/components/navbar";
 import { EmotionKey, EmotiArtState } from "@/lib/emotiart-types";
 
 export default function EmotiArtPage() {
@@ -70,13 +71,7 @@ export default function EmotiArtPage() {
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#0d0d0f]">
-      {/* Header */}
-      <header className="h-14 flex-shrink-0 flex items-center px-5 border-b border-white/[0.07] bg-[#0d0d0f]">
-        <h1 className="font-sans font-bold text-xl tracking-tight">
-          <span className="text-[#06AED4]">Emoti</span>
-          <span className="text-white">Art</span>
-        </h1>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
