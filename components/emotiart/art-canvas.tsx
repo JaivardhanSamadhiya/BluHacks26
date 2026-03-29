@@ -14,10 +14,9 @@ interface ArtCanvasProps {
   emotion: EmotionKey;
   isGenerated: boolean;
   generationKey: number;
-  artParams?: ArtParams; // rich params from Flask pipeline — optional
+  artParams?: ArtParams;
 }
 
-// Shape type strings coming from the backend / emotion map
 const EMOTION_SHAPE: Record<EmotionKey, string> = {
   happy:       "circle",
   calm:        "wave",
@@ -28,6 +27,17 @@ const EMOTION_SHAPE: Record<EmotionKey, string> = {
   overwhelmed: "dense",
 };
 
+// Secondary gradient colors for each emotion
+const EMOTION_GRADIENT: Record<EmotionKey, { primary: string; secondary: string; tertiary: string }> = {
+  happy:       { primary: "#FFD166", secondary: "#FF9F1C", tertiary: "#FFF3D6" },
+  calm:        { primary: "#06AED4", secondary: "#0891B2", tertiary: "#164E63" },
+  sad:         { primary: "#9B72CF", secondary: "#7C3AED", tertiary: "#4C1D95" },
+  angry:       { primary: "#EF233C", secondary: "#DC2626", tertiary: "#7F1D1D" },
+  anxious:     { primary: "#F4A261", secondary: "#EA580C", tertiary: "#9A3412" },
+  excited:     { primary: "#FF6B9D", secondary: "#EC4899", tertiary: "#DB2777" },
+  overwhelmed: { primary: "#8ECAE6", secondary: "#38BDF8", tertiary: "#0284C7" },
+};
+
 interface Shape {
   x: number;
   y: number;
@@ -36,10 +46,29 @@ interface Shape {
   rotation: number;
   shapeType: string;
   color: string;
+  // Animation properties
+  vx: number;
+  vy: number;
+  pulsePhase: number;
+  pulseSpeed: number;
+  rotationSpeed: number;
+  layer: "background" | "midground" | "foreground";
   // anxious dots cluster
   dots?: { dx: number; dy: number; r: number }[];
   // overwhelmed / dense rect cluster
   rects?: { dx: number; dy: number; w: number; h: number; opacity: number }[];
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  size: number;
+  opacity: number;
+  vx: number;
+  vy: number;
+  color: string;
+  life: number;
+  maxLife: number;
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -47,6 +76,23 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  return {
+    r: parseInt(hex.slice(1, 3), 16),
+    g: parseInt(hex.slice(3, 5), 16),
+    b: parseInt(hex.slice(5, 7), 16),
+  };
+}
+
+function lerpColor(color1: string, color2: string, t: number): string {
+  const c1 = hexToRgb(color1);
+  const c2 = hexToRgb(color2);
+  const r = Math.round(c1.r + (c2.r - c1.r) * t);
+  const g = Math.round(c1.g + (c2.g - c1.g) * t);
+  const b = Math.round(c1.b + (c2.b - c1.b) * t);
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 interface GenOptions {
@@ -63,37 +109,86 @@ function buildShapes(opts: GenOptions, width: number, height: number): Shape[] {
   const { shapeType, color, count, sizeMin, sizeMax, opacityMin, opacityMax } = opts;
   const shapes: Shape[] = [];
 
-  for (let i = 0; i < count; i++) {
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    const size = Math.random() * (sizeMax - sizeMin) + sizeMin;
-    const opacity = Math.random() * (opacityMax - opacityMin) + opacityMin;
-    const rotation = (Math.random() - 0.5) * 0.8;
+  // Distribute shapes across layers
+  const backgroundCount = Math.floor(count * 0.3);
+  const midgroundCount = Math.floor(count * 0.4);
+  const foregroundCount = count - backgroundCount - midgroundCount;
 
-    if (shapeType === "dot") {
-      const dotCount = Math.floor(Math.random() * 5) + 3;
-      const dots = Array.from({ length: dotCount }, () => ({
-        dx: (Math.random() - 0.5) * size,
-        dy: (Math.random() - 0.5) * size,
-        r: Math.random() * 6 + 2,
-      }));
-      shapes.push({ x, y, size, opacity, rotation, shapeType, color, dots });
-    } else if (shapeType === "dense") {
-      const rectCount = Math.floor(Math.random() * 3) + 2;
-      const rects = Array.from({ length: rectCount }, () => ({
-        dx: (Math.random() - 0.5) * size * 0.5,
-        dy: (Math.random() - 0.5) * size * 0.5,
-        w: Math.random() * size * 0.6 + size * 0.3,
-        h: Math.random() * size * 0.6 + size * 0.3,
-        opacity: Math.random() * 0.3 + 0.2,
-      }));
-      shapes.push({ x, y, size, opacity, rotation, shapeType, color, rects });
-    } else {
-      shapes.push({ x, y, size, opacity, rotation, shapeType, color });
+  const layerCounts = [
+    { layer: "background" as const, count: backgroundCount, sizeScale: 0.6, opacityScale: 0.4 },
+    { layer: "midground" as const, count: midgroundCount, sizeScale: 1.0, opacityScale: 0.7 },
+    { layer: "foreground" as const, count: foregroundCount, sizeScale: 1.4, opacityScale: 1.0 },
+  ];
+
+  for (const layerConfig of layerCounts) {
+    for (let i = 0; i < layerConfig.count; i++) {
+      // Bias towards center for some shapes
+      const centerBias = Math.random() > 0.6;
+      let x, y;
+      if (centerBias) {
+        x = width / 2 + (Math.random() - 0.5) * width * 0.6;
+        y = height / 2 + (Math.random() - 0.5) * height * 0.6;
+      } else {
+        x = Math.random() * width;
+        y = Math.random() * height;
+      }
+
+      const baseSize = Math.random() * (sizeMax - sizeMin) + sizeMin;
+      const size = baseSize * layerConfig.sizeScale;
+      const baseOpacity = Math.random() * (opacityMax - opacityMin) + opacityMin;
+      const opacity = baseOpacity * layerConfig.opacityScale;
+      const rotation = (Math.random() - 0.5) * 0.8;
+
+      // Animation properties
+      const vx = (Math.random() - 0.5) * 0.3;
+      const vy = (Math.random() - 0.5) * 0.3;
+      const pulsePhase = Math.random() * Math.PI * 2;
+      const pulseSpeed = 0.5 + Math.random() * 1.0;
+      const rotationSpeed = (Math.random() - 0.5) * 0.01;
+
+      if (shapeType === "dot") {
+        const dotCount = Math.floor(Math.random() * 6) + 4;
+        const dots = Array.from({ length: dotCount }, () => ({
+          dx: (Math.random() - 0.5) * size,
+          dy: (Math.random() - 0.5) * size,
+          r: Math.random() * 5 + 2,
+        }));
+        shapes.push({ x, y, size, opacity, rotation, shapeType, color, dots, vx, vy, pulsePhase, pulseSpeed, rotationSpeed, layer: layerConfig.layer });
+      } else if (shapeType === "dense") {
+        const rectCount = Math.floor(Math.random() * 4) + 3;
+        const rects = Array.from({ length: rectCount }, () => ({
+          dx: (Math.random() - 0.5) * size * 0.5,
+          dy: (Math.random() - 0.5) * size * 0.5,
+          w: Math.random() * size * 0.5 + size * 0.2,
+          h: Math.random() * size * 0.5 + size * 0.2,
+          opacity: Math.random() * 0.4 + 0.2,
+        }));
+        shapes.push({ x, y, size, opacity, rotation, shapeType, color, rects, vx, vy, pulsePhase, pulseSpeed, rotationSpeed, layer: layerConfig.layer });
+      } else {
+        shapes.push({ x, y, size, opacity, rotation, shapeType, color, vx, vy, pulsePhase, pulseSpeed, rotationSpeed, layer: layerConfig.layer });
+      }
     }
   }
 
-  return shapes;
+  // Sort by layer for proper rendering order
+  return shapes.sort((a, b) => {
+    const order = { background: 0, midground: 1, foreground: 2 };
+    return order[a.layer] - order[b.layer];
+  });
+}
+
+function generateParticles(color: string, width: number, height: number, count: number): Particle[] {
+  return Array.from({ length: count }, () => ({
+    x: Math.random() * width,
+    y: Math.random() * height,
+    size: Math.random() * 3 + 1,
+    opacity: Math.random() * 0.5 + 0.1,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5 - 0.2,
+    color,
+    life: Math.random() * 100,
+    maxLife: 100 + Math.random() * 100,
+  }));
 }
 
 function generateShapes(
@@ -105,7 +200,6 @@ function generateShapes(
   const emotionData = EMOTIONS.find((e) => e.key === emotion)!;
 
   if (artParams) {
-    // Use new primaryShapeCount and secondaryShapeCount if available
     const primaryCount = artParams.primaryShapeCount ||
       (artParams.secondaryRatio > 0 && artParams.secondary
         ? Math.round(artParams.shapeCount * (1 - artParams.secondaryRatio))
@@ -142,21 +236,22 @@ function generateShapes(
         width,
         height
       );
-      // Combine both - don't interleave, let them naturally overlap
-      return [...primary, ...secondary];
+      return [...primary, ...secondary].sort((a, b) => {
+        const order = { background: 0, midground: 1, foreground: 2 };
+        return order[a.layer] - order[b.layer];
+      });
     }
 
     return primary;
   }
 
-  // Fallback defaults (text analysis / no artParams)
   return buildShapes(
     {
       shapeType: EMOTION_SHAPE[emotion],
       color: emotionData.color,
-      count: Math.floor(Math.random() * 11) + 18,
-      sizeMin: 20,
-      sizeMax: 80,
+      count: Math.floor(Math.random() * 40) + 60,
+      sizeMin: 15,
+      sizeMax: 70,
       opacityMin: 0.2,
       opacityMax: 0.7,
     },
@@ -165,43 +260,165 @@ function generateShapes(
   );
 }
 
+function drawGradientBackground(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  emotion: EmotionKey,
+  time: number,
+  secondaryEmotion?: EmotionKey
+) {
+  const gradientColors = EMOTION_GRADIENT[emotion];
+  const secondaryGradient = secondaryEmotion ? EMOTION_GRADIENT[secondaryEmotion] : null;
+
+  // Animated gradient position
+  const cx = width / 2 + Math.sin(time * 0.0005) * width * 0.1;
+  const cy = height / 2 + Math.cos(time * 0.0007) * height * 0.1;
+
+  // Dark base
+  ctx.fillStyle = "#08080a";
+  ctx.fillRect(0, 0, width, height);
+
+  // Primary radial gradient from center
+  const primaryGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.8);
+  primaryGradient.addColorStop(0, hexToRgba(gradientColors.primary, 0.15));
+  primaryGradient.addColorStop(0.4, hexToRgba(gradientColors.secondary, 0.08));
+  primaryGradient.addColorStop(0.7, hexToRgba(gradientColors.tertiary, 0.04));
+  primaryGradient.addColorStop(1, "transparent");
+  ctx.fillStyle = primaryGradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Secondary emotion gradient (if exists)
+  if (secondaryGradient) {
+    const sx = width * 0.7 + Math.sin(time * 0.0006) * width * 0.1;
+    const sy = height * 0.3 + Math.cos(time * 0.0008) * height * 0.1;
+    const secondGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(width, height) * 0.5);
+    secondGrad.addColorStop(0, hexToRgba(secondaryGradient.primary, 0.1));
+    secondGrad.addColorStop(0.5, hexToRgba(secondaryGradient.secondary, 0.05));
+    secondGrad.addColorStop(1, "transparent");
+    ctx.fillStyle = secondGrad;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  // Ambient moving glow orbs
+  const orbCount = 3;
+  for (let i = 0; i < orbCount; i++) {
+    const angle = time * 0.0003 + (i * Math.PI * 2) / orbCount;
+    const orbX = width / 2 + Math.cos(angle) * width * 0.3;
+    const orbY = height / 2 + Math.sin(angle * 1.3) * height * 0.25;
+    const orbGradient = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, 150);
+    orbGradient.addColorStop(0, hexToRgba(gradientColors.primary, 0.08));
+    orbGradient.addColorStop(1, "transparent");
+    ctx.fillStyle = orbGradient;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  // Subtle grid overlay
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.02)";
+  ctx.lineWidth = 1;
+  const gridSize = 50;
+  for (let x = 0; x <= width; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= height; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+}
+
 function drawShape(
   ctx: CanvasRenderingContext2D,
   shape: Shape,
-  progress: number
+  progress: number,
+  time: number,
+  enableGlow: boolean = true
 ) {
+  // Pulse animation
+  const pulseScale = 1 + Math.sin(time * 0.002 * shape.pulseSpeed + shape.pulsePhase) * 0.08;
+  const animatedSize = shape.size * pulseScale;
+
+  // Position animation (subtle drift)
+  const animX = shape.x + Math.sin(time * 0.001 + shape.pulsePhase) * 3;
+  const animY = shape.y + Math.cos(time * 0.0012 + shape.pulsePhase) * 3;
+
   const alpha = shape.opacity * progress;
   const { shapeType, color } = shape;
 
   ctx.save();
-  ctx.translate(shape.x, shape.y);
+  ctx.translate(animX, animY);
+
+  // Glow effect for foreground shapes
+  if (enableGlow && shape.layer === "foreground") {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 20;
+  }
 
   switch (shapeType) {
     case "circle": {
+      // Outer glow ring
+      if (enableGlow) {
+        ctx.fillStyle = hexToRgba(color, alpha * 0.15);
+        ctx.beginPath();
+        ctx.arc(0, 0, animatedSize / 2 + 15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
       ctx.fillStyle = hexToRgba(color, alpha);
       ctx.beginPath();
-      ctx.arc(0, 0, shape.size / 2, 0, Math.PI * 2);
+      ctx.arc(0, 0, animatedSize / 2, 0, Math.PI * 2);
       ctx.fill();
-      if (Math.random() > 0.6) {
-        ctx.strokeStyle = hexToRgba(color, alpha * 0.3);
-        ctx.lineWidth = 3;
+
+      // Inner highlight
+      const highlight = ctx.createRadialGradient(
+        -animatedSize * 0.15, -animatedSize * 0.15, 0,
+        0, 0, animatedSize / 2
+      );
+      highlight.addColorStop(0, hexToRgba("#ffffff", alpha * 0.3));
+      highlight.addColorStop(0.5, "transparent");
+      highlight.addColorStop(1, "transparent");
+      ctx.fillStyle = highlight;
+      ctx.fill();
+
+      // Decorative ring
+      if (Math.random() > 0.7) {
+        ctx.strokeStyle = hexToRgba(color, alpha * 0.4);
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(0, 0, shape.size / 2 + 6, 0, Math.PI * 2);
+        ctx.arc(0, 0, animatedSize / 2 + 8, 0, Math.PI * 2);
         ctx.stroke();
       }
       break;
     }
     case "wave": {
+      const animatedRotation = shape.rotation + time * shape.rotationSpeed;
+      ctx.rotate(animatedRotation);
+      
       ctx.strokeStyle = hexToRgba(color, alpha);
       ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.beginPath();
-      const amplitude = shape.size * 0.3;
-      const frequency = 0.05 + Math.random() * 0.03;
-      const length = shape.size * 2;
+      const amplitude = animatedSize * 0.35;
+      const frequency = 0.04 + Math.sin(time * 0.001) * 0.01;
+      const phaseShift = time * 0.003;
+      const length = animatedSize * 2.5;
       ctx.moveTo(-length / 2, 0);
       for (let x = -length / 2; x <= length / 2; x += 2) {
-        ctx.lineTo(x, Math.sin(x * frequency) * amplitude);
+        ctx.lineTo(x, Math.sin(x * frequency + phaseShift) * amplitude);
+      }
+      ctx.stroke();
+
+      // Second wave layer
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.4);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-length / 2, 0);
+      for (let x = -length / 2; x <= length / 2; x += 2) {
+        ctx.lineTo(x, Math.sin(x * frequency + phaseShift + Math.PI) * amplitude * 0.6);
       }
       ctx.stroke();
       break;
@@ -211,39 +428,93 @@ function drawShape(
       ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.arc(0, 0, shape.size / 2, Math.PI, 2 * Math.PI);
+      ctx.arc(0, 0, animatedSize / 2, Math.PI, 2 * Math.PI);
+      ctx.stroke();
+
+      // Second arc
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.5);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, animatedSize * 0.15, animatedSize / 2 * 0.7, Math.PI, 2 * Math.PI);
       ctx.stroke();
       break;
     }
     case "triangle": {
-      ctx.rotate(shape.rotation);
+      const animatedRotation = shape.rotation + time * shape.rotationSpeed;
+      ctx.rotate(animatedRotation);
+
+      // Glow
+      if (enableGlow) {
+        ctx.fillStyle = hexToRgba(color, alpha * 0.2);
+        const hGlow = animatedSize * 1.2;
+        const wGlow = animatedSize * 1.0;
+        ctx.beginPath();
+        ctx.moveTo(0, -hGlow / 2);
+        ctx.lineTo(wGlow / 2, hGlow / 2);
+        ctx.lineTo(-wGlow / 2, hGlow / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+
       ctx.fillStyle = hexToRgba(color, alpha);
       ctx.beginPath();
-      const h = shape.size;
-      const w = shape.size * 0.8;
+      const h = animatedSize;
+      const w = animatedSize * 0.8;
       ctx.moveTo(0, -h / 2);
       ctx.lineTo(w / 2, h / 2);
       ctx.lineTo(-w / 2, h / 2);
       ctx.closePath();
       ctx.fill();
+
+      // Edge highlight
+      ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.3);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, -h / 2);
+      ctx.lineTo(-w / 2, h / 2);
+      ctx.stroke();
       break;
     }
     case "dot": {
       if (shape.dots) {
+        // Connecting lines between dots
+        if (enableGlow && shape.dots.length > 1) {
+          ctx.strokeStyle = hexToRgba(color, alpha * 0.2);
+          ctx.lineWidth = 1;
+          for (let i = 0; i < shape.dots.length - 1; i++) {
+            ctx.beginPath();
+            ctx.moveTo(shape.dots[i].dx, shape.dots[i].dy);
+            ctx.lineTo(shape.dots[i + 1].dx, shape.dots[i + 1].dy);
+            ctx.stroke();
+          }
+        }
+
         ctx.fillStyle = hexToRgba(color, alpha);
         for (const dot of shape.dots) {
+          const dotPulse = 1 + Math.sin(time * 0.003 + dot.dx * 0.1) * 0.2;
           ctx.beginPath();
-          ctx.arc(dot.dx, dot.dy, dot.r, 0, Math.PI * 2);
+          ctx.arc(dot.dx, dot.dy, dot.r * dotPulse, 0, Math.PI * 2);
           ctx.fill();
         }
       }
       break;
     }
     case "star": {
-      ctx.rotate(shape.rotation);
+      const animatedRotation = shape.rotation + time * shape.rotationSpeed * 2;
+      ctx.rotate(animatedRotation);
+
+      // Glow
+      if (enableGlow) {
+        ctx.fillStyle = hexToRgba(color, alpha * 0.15);
+        ctx.beginPath();
+        const outerGlow = animatedSize / 2 + 12;
+        ctx.arc(0, 0, outerGlow, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       ctx.fillStyle = hexToRgba(color, alpha);
       ctx.beginPath();
-      const outerR = shape.size / 2;
+      const outerR = animatedSize / 2;
       const innerR = outerR * 0.4;
       for (let i = 0; i < 12; i++) {
         const r = i % 2 === 0 ? outerR : innerR;
@@ -255,13 +526,28 @@ function drawShape(
       }
       ctx.closePath();
       ctx.fill();
+
+      // Center glow
+      const centerGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, innerR);
+      centerGrad.addColorStop(0, hexToRgba("#ffffff", alpha * 0.6));
+      centerGrad.addColorStop(1, "transparent");
+      ctx.fillStyle = centerGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+      ctx.fill();
       break;
     }
     case "dense": {
       if (shape.rects) {
         for (const rect of shape.rects) {
+          const rectPulse = 1 + Math.sin(time * 0.002 + rect.dx * 0.05) * 0.1;
           ctx.fillStyle = hexToRgba(color, rect.opacity * progress);
-          ctx.fillRect(rect.dx - rect.w / 2, rect.dy - rect.h / 2, rect.w, rect.h);
+          ctx.fillRect(
+            (rect.dx - rect.w / 2) * rectPulse,
+            (rect.dy - rect.h / 2) * rectPulse,
+            rect.w * rectPulse,
+            rect.h * rectPulse
+          );
         }
       }
       break;
@@ -269,6 +555,42 @@ function drawShape(
   }
 
   ctx.restore();
+}
+
+function drawParticles(
+  ctx: CanvasRenderingContext2D,
+  particles: Particle[],
+  width: number,
+  height: number
+) {
+  for (const p of particles) {
+    // Update position
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life++;
+
+    // Wrap around edges
+    if (p.x < 0) p.x = width;
+    if (p.x > width) p.x = 0;
+    if (p.y < 0) p.y = height;
+    if (p.y > height) p.y = 0;
+
+    // Reset if life exceeded
+    if (p.life > p.maxLife) {
+      p.life = 0;
+      p.x = Math.random() * width;
+      p.y = Math.random() * height;
+    }
+
+    // Fade based on life
+    const lifeFade = 1 - Math.abs(p.life - p.maxLife / 2) / (p.maxLife / 2);
+    const alpha = p.opacity * lifeFade;
+
+    ctx.fillStyle = hexToRgba(p.color, alpha);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 export const ArtCanvas = forwardRef<
@@ -279,10 +601,17 @@ export const ArtCanvas = forwardRef<
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [shapes, setShapes] = useState<Shape[]>([]);
+  const [particles, setParticles] = useState<Particle[]>([]);
   const animationRef = useRef<number>(0);
+  const continuousAnimRef = useRef<number>(0);
   const [timestamp, setTimestamp] = useState("");
+  const startTimeRef = useRef<number>(0);
 
   const emotionData = EMOTIONS.find((e) => e.key === emotion)!;
+  const secondaryEmotion = artParams?.secondary ? 
+    (Object.keys(EMOTION_GRADIENT) as EmotionKey[]).find(k => 
+      EMOTION_GRADIENT[k].primary === artParams.secondary?.color
+    ) : undefined;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -297,26 +626,66 @@ export const ArtCanvas = forwardRef<
     return () => observer.disconnect();
   }, []);
 
-  const drawGrid = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    ctx.fillStyle = "#0d0d0f";
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
-    ctx.lineWidth = 1;
-    const gridSize = 40;
-    for (let x = 0; x <= width; x += gridSize) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
-    }
-    for (let y = 0; y <= height; y += gridSize) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-    }
-  }, []);
+  // Continuous animation loop for living artwork
+  useEffect(() => {
+    if (!isGenerated || shapes.length === 0) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+
+    const animateLoop = (currentTime: number) => {
+      if (!startTimeRef.current) startTimeRef.current = currentTime;
+      const time = currentTime - startTimeRef.current;
+
+      // Draw gradient background
+      drawGradientBackground(ctx, dimensions.width * dpr, dimensions.height * dpr, emotion, time, secondaryEmotion);
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      // Draw particles
+      drawParticles(ctx, particles, dimensions.width, dimensions.height);
+
+      // Draw shapes with animation
+      shapes.forEach((shape) => {
+        drawShape(ctx, shape, 1, time, true);
+      });
+
+      // Timestamp
+      ctx.font = "11px var(--font-dm-mono), monospace";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+      ctx.fillText(
+        `${emotion} · ${timestamp}`,
+        16,
+        dimensions.height - 16
+      );
+
+      ctx.restore();
+
+      continuousAnimRef.current = requestAnimationFrame(animateLoop);
+    };
+
+    continuousAnimRef.current = requestAnimationFrame(animateLoop);
+
+    return () => {
+      cancelAnimationFrame(continuousAnimRef.current);
+    };
+  }, [isGenerated, shapes, particles, dimensions, emotion, timestamp, secondaryEmotion]);
 
   const generateArt = useCallback(() => {
     if (dimensions.width === 0 || dimensions.height === 0) return;
 
     const newShapes = generateShapes(emotion, dimensions.width, dimensions.height, artParams);
+    const newParticles = generateParticles(emotionData.color, dimensions.width, dimensions.height, 50);
+    
     setShapes(newShapes);
+    setParticles(newParticles);
     setTimestamp(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+    startTimeRef.current = 0;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -325,25 +694,39 @@ export const ArtCanvas = forwardRef<
 
     const dpr = window.devicePixelRatio || 1;
     const startTime = performance.now();
-    const duration = 600;
+    const duration = 800;
+
+    // Stop continuous animation during intro
+    cancelAnimationFrame(continuousAnimRef.current);
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
 
-      drawGrid(ctx, dimensions.width * dpr, dimensions.height * dpr);
+      drawGradientBackground(ctx, dimensions.width * dpr, dimensions.height * dpr, emotion, elapsed, secondaryEmotion);
 
       ctx.save();
       ctx.scale(dpr, dpr);
 
+      // Fade in particles
+      if (progress > 0.3) {
+        const particleProgress = (progress - 0.3) / 0.7;
+        ctx.globalAlpha = particleProgress;
+        drawParticles(ctx, newParticles, dimensions.width, dimensions.height);
+        ctx.globalAlpha = 1;
+      }
+
       newShapes.forEach((shape, index) => {
-        const shapeDelay = (index / newShapes.length) * 0.5;
-        const shapeProgress = Math.max(0, Math.min(1, (progress - shapeDelay) / 0.5));
-        if (shapeProgress > 0) drawShape(ctx, shape, shapeProgress);
+        const shapeDelay = (index / newShapes.length) * 0.4;
+        const shapeProgress = Math.max(0, Math.min(1, (easedProgress - shapeDelay) / 0.6));
+        if (shapeProgress > 0) {
+          drawShape(ctx, shape, shapeProgress, elapsed, shapeProgress > 0.5);
+        }
       });
 
       ctx.font = "11px var(--font-dm-mono), monospace";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.25 * easedProgress})`;
       ctx.fillText(
         `${emotion} · ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`,
         16,
@@ -352,12 +735,14 @@ export const ArtCanvas = forwardRef<
 
       ctx.restore();
 
-      if (progress < 1) animationRef.current = requestAnimationFrame(animate);
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
     };
 
     cancelAnimationFrame(animationRef.current);
     animationRef.current = requestAnimationFrame(animate);
-  }, [dimensions, emotion, artParams, drawGrid]);
+  }, [dimensions, emotion, artParams, emotionData.color, secondaryEmotion]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -367,17 +752,10 @@ export const ArtCanvas = forwardRef<
     canvas.height = dimensions.height * dpr;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    drawGrid(ctx, dimensions.width * dpr, dimensions.height * dpr);
-    if (isGenerated && shapes.length > 0) {
-      ctx.save();
-      ctx.scale(dpr, dpr);
-      shapes.forEach((shape) => drawShape(ctx, shape, 1));
-      ctx.font = "11px var(--font-dm-mono), monospace";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
-      ctx.fillText(`${emotion} · ${timestamp}`, 16, dimensions.height - 16);
-      ctx.restore();
-    }
-  }, [dimensions, isGenerated, shapes, emotion, emotionData.color, timestamp, drawGrid]);
+    
+    // Draw initial gradient background
+    drawGradientBackground(ctx, dimensions.width * dpr, dimensions.height * dpr, emotion, 0);
+  }, [dimensions, emotion]);
 
   useEffect(() => {
     if (isGenerated && generationKey > 0) generateArt();
