@@ -1,7 +1,7 @@
 import type { EmotionKey, ArtParams } from "@/lib/emotiart-types";
 import type { SynthesisResult } from "@/lib/emotion-synthesizer";
 
-const EMOTION_ART: Record<EmotionKey, { color: string; colorRgb: number[]; shape: string }> = {
+export const EMOTION_ART: Record<EmotionKey, { color: string; colorRgb: number[]; shape: string }> = {
   happy:       { color: "#FFD166", colorRgb: [255, 209, 102], shape: "circle"   },
   calm:        { color: "#06AED4", colorRgb: [6,   174, 212], shape: "wave"     },
   sad:         { color: "#9B72CF", colorRgb: [155, 114, 207], shape: "arc"      },
