@@ -27,15 +27,15 @@ const EMOTION_SHAPE: Record<EmotionKey, string> = {
   overwhelmed: "dense",
 };
 
-// Secondary gradient colors for each emotion
+// Vibrant gradient colors for each emotion - bright and saturated
 const EMOTION_GRADIENT: Record<EmotionKey, { primary: string; secondary: string; tertiary: string }> = {
-  happy:       { primary: "#FFD166", secondary: "#FF9F1C", tertiary: "#FFF3D6" },
-  calm:        { primary: "#06AED4", secondary: "#0891B2", tertiary: "#164E63" },
-  sad:         { primary: "#9B72CF", secondary: "#7C3AED", tertiary: "#4C1D95" },
-  angry:       { primary: "#EF233C", secondary: "#DC2626", tertiary: "#7F1D1D" },
-  anxious:     { primary: "#F4A261", secondary: "#EA580C", tertiary: "#9A3412" },
-  excited:     { primary: "#FF6B9D", secondary: "#EC4899", tertiary: "#DB2777" },
-  overwhelmed: { primary: "#8ECAE6", secondary: "#38BDF8", tertiary: "#0284C7" },
+  happy:       { primary: "#FFE747", secondary: "#FFAA00", tertiary: "#FF7700" },
+  calm:        { primary: "#00E5FF", secondary: "#00BCD4", tertiary: "#26C6DA" },
+  sad:         { primary: "#B388FF", secondary: "#9C27B0", tertiary: "#7C4DFF" },
+  angry:       { primary: "#FF1744", secondary: "#FF5252", tertiary: "#FF8A80" },
+  anxious:     { primary: "#FFAB40", secondary: "#FF6E40", tertiary: "#FF9100" },
+  excited:     { primary: "#FF4081", secondary: "#F50057", tertiary: "#FF80AB" },
+  overwhelmed: { primary: "#40C4FF", secondary: "#00B0FF", tertiary: "#80D8FF" },
 };
 
 interface Shape {
@@ -181,10 +181,10 @@ function generateParticles(color: string, width: number, height: number, count: 
   return Array.from({ length: count }, () => ({
     x: Math.random() * width,
     y: Math.random() * height,
-    size: Math.random() * 3 + 1,
-    opacity: Math.random() * 0.5 + 0.1,
-    vx: (Math.random() - 0.5) * 0.5,
-    vy: (Math.random() - 0.5) * 0.5 - 0.2,
+    size: Math.random() * 4 + 2,
+    opacity: Math.random() * 0.7 + 0.3,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6 - 0.3,
     color,
     life: Math.random() * 100,
     maxLife: 100 + Math.random() * 100,
@@ -279,13 +279,23 @@ function drawGradientBackground(
   ctx.fillStyle = "#08080a";
   ctx.fillRect(0, 0, width, height);
 
-  // Primary radial gradient from center
-  const primaryGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.8);
-  primaryGradient.addColorStop(0, hexToRgba(gradientColors.primary, 0.15));
-  primaryGradient.addColorStop(0.4, hexToRgba(gradientColors.secondary, 0.08));
-  primaryGradient.addColorStop(0.7, hexToRgba(gradientColors.tertiary, 0.04));
+  // Primary radial gradient from center - BRIGHT
+  const primaryGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(width, height) * 0.9);
+  primaryGradient.addColorStop(0, hexToRgba(gradientColors.primary, 0.35));
+  primaryGradient.addColorStop(0.3, hexToRgba(gradientColors.secondary, 0.2));
+  primaryGradient.addColorStop(0.6, hexToRgba(gradientColors.tertiary, 0.1));
   primaryGradient.addColorStop(1, "transparent");
   ctx.fillStyle = primaryGradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Secondary radial at opposite corner
+  const cx2 = width - cx;
+  const cy2 = height - cy;
+  const secondaryGrad = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, Math.max(width, height) * 0.7);
+  secondaryGrad.addColorStop(0, hexToRgba(gradientColors.tertiary, 0.25));
+  secondaryGrad.addColorStop(0.5, hexToRgba(gradientColors.secondary, 0.1));
+  secondaryGrad.addColorStop(1, "transparent");
+  ctx.fillStyle = secondaryGrad;
   ctx.fillRect(0, 0, width, height);
 
   // Secondary emotion gradient (if exists)
@@ -293,21 +303,22 @@ function drawGradientBackground(
     const sx = width * 0.7 + Math.sin(time * 0.0006) * width * 0.1;
     const sy = height * 0.3 + Math.cos(time * 0.0008) * height * 0.1;
     const secondGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(width, height) * 0.5);
-    secondGrad.addColorStop(0, hexToRgba(secondaryGradient.primary, 0.1));
-    secondGrad.addColorStop(0.5, hexToRgba(secondaryGradient.secondary, 0.05));
+    secondGrad.addColorStop(0, hexToRgba(secondaryGradient.primary, 0.25));
+    secondGrad.addColorStop(0.5, hexToRgba(secondaryGradient.secondary, 0.12));
     secondGrad.addColorStop(1, "transparent");
     ctx.fillStyle = secondGrad;
     ctx.fillRect(0, 0, width, height);
   }
 
-  // Ambient moving glow orbs
-  const orbCount = 3;
+  // Ambient moving glow orbs - bigger and brighter
+  const orbCount = 4;
   for (let i = 0; i < orbCount; i++) {
     const angle = time * 0.0003 + (i * Math.PI * 2) / orbCount;
-    const orbX = width / 2 + Math.cos(angle) * width * 0.3;
-    const orbY = height / 2 + Math.sin(angle * 1.3) * height * 0.25;
-    const orbGradient = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, 150);
-    orbGradient.addColorStop(0, hexToRgba(gradientColors.primary, 0.08));
+    const orbX = width / 2 + Math.cos(angle) * width * 0.35;
+    const orbY = height / 2 + Math.sin(angle * 1.3) * height * 0.3;
+    const orbGradient = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, 200);
+    orbGradient.addColorStop(0, hexToRgba(gradientColors.primary, 0.2));
+    orbGradient.addColorStop(0.5, hexToRgba(gradientColors.secondary, 0.08));
     orbGradient.addColorStop(1, "transparent");
     ctx.fillStyle = orbGradient;
     ctx.fillRect(0, 0, width, height);
@@ -352,90 +363,168 @@ function drawShape(
   ctx.save();
   ctx.translate(animX, animY);
 
-  // Glow effect for foreground shapes
-  if (enableGlow && shape.layer === "foreground") {
+  // Glow effect for shapes - stronger for foreground
+  if (enableGlow) {
     ctx.shadowColor = color;
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = shape.layer === "foreground" ? 35 : shape.layer === "midground" ? 15 : 8;
   }
 
   switch (shapeType) {
     case "circle": {
-      // Outer glow ring
+      // Outer glow rings - multiple layers for intensity
       if (enableGlow) {
+        ctx.fillStyle = hexToRgba(color, alpha * 0.08);
+        ctx.beginPath();
+        ctx.arc(0, 0, animatedSize / 2 + 30, 0, Math.PI * 2);
+        ctx.fill();
+        
         ctx.fillStyle = hexToRgba(color, alpha * 0.15);
         ctx.beginPath();
-        ctx.arc(0, 0, animatedSize / 2 + 15, 0, Math.PI * 2);
+        ctx.arc(0, 0, animatedSize / 2 + 18, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = hexToRgba(color, alpha * 0.25);
+        ctx.beginPath();
+        ctx.arc(0, 0, animatedSize / 2 + 8, 0, Math.PI * 2);
         ctx.fill();
       }
       
-      ctx.fillStyle = hexToRgba(color, alpha);
+      // Main circle with gradient fill for depth
+      const mainGrad = ctx.createRadialGradient(
+        -animatedSize * 0.1, -animatedSize * 0.1, 0,
+        0, 0, animatedSize / 2
+      );
+      mainGrad.addColorStop(0, hexToRgba("#ffffff", alpha * 0.5));
+      mainGrad.addColorStop(0.3, hexToRgba(color, alpha));
+      mainGrad.addColorStop(1, hexToRgba(color, alpha * 0.8));
+      ctx.fillStyle = mainGrad;
       ctx.beginPath();
       ctx.arc(0, 0, animatedSize / 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Inner highlight
+      // Bright center highlight
       const highlight = ctx.createRadialGradient(
-        -animatedSize * 0.15, -animatedSize * 0.15, 0,
-        0, 0, animatedSize / 2
+        -animatedSize * 0.12, -animatedSize * 0.12, 0,
+        0, 0, animatedSize / 3
       );
-      highlight.addColorStop(0, hexToRgba("#ffffff", alpha * 0.3));
-      highlight.addColorStop(0.5, "transparent");
+      highlight.addColorStop(0, hexToRgba("#ffffff", alpha * 0.7));
+      highlight.addColorStop(0.4, hexToRgba("#ffffff", alpha * 0.2));
       highlight.addColorStop(1, "transparent");
       ctx.fillStyle = highlight;
+      ctx.beginPath();
+      ctx.arc(0, 0, animatedSize / 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Decorative ring
-      if (Math.random() > 0.7) {
-        ctx.strokeStyle = hexToRgba(color, alpha * 0.4);
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, animatedSize / 2 + 8, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+      // Decorative outer ring
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.6);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, animatedSize / 2 + 5, 0, Math.PI * 2);
+      ctx.stroke();
       break;
     }
     case "wave": {
       const animatedRotation = shape.rotation + time * shape.rotationSpeed;
       ctx.rotate(animatedRotation);
       
-      ctx.strokeStyle = hexToRgba(color, alpha);
-      ctx.lineWidth = 3;
-      ctx.lineCap = "round";
-      ctx.beginPath();
       const amplitude = animatedSize * 0.35;
       const frequency = 0.04 + Math.sin(time * 0.001) * 0.01;
       const phaseShift = time * 0.003;
       const length = animatedSize * 2.5;
+
+      // Glow wave (wide, soft)
+      if (enableGlow) {
+        ctx.strokeStyle = hexToRgba(color, alpha * 0.15);
+        ctx.lineWidth = 12;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(-length / 2, 0);
+        for (let x = -length / 2; x <= length / 2; x += 2) {
+          ctx.lineTo(x, Math.sin(x * frequency + phaseShift) * amplitude);
+        }
+        ctx.stroke();
+      }
+
+      // Main wave - bright
+      ctx.strokeStyle = hexToRgba(color, alpha);
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.beginPath();
       ctx.moveTo(-length / 2, 0);
       for (let x = -length / 2; x <= length / 2; x += 2) {
         ctx.lineTo(x, Math.sin(x * frequency + phaseShift) * amplitude);
       }
       ctx.stroke();
 
-      // Second wave layer
-      ctx.strokeStyle = hexToRgba(color, alpha * 0.4);
+      // White highlight on top
+      ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.4);
       ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-length / 2, 0);
+      for (let x = -length / 2; x <= length / 2; x += 2) {
+        ctx.lineTo(x, Math.sin(x * frequency + phaseShift) * amplitude - 2);
+      }
+      ctx.stroke();
+
+      // Second wave layer
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.5);
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(-length / 2, 0);
       for (let x = -length / 2; x <= length / 2; x += 2) {
         ctx.lineTo(x, Math.sin(x * frequency + phaseShift + Math.PI) * amplitude * 0.6);
       }
       ctx.stroke();
+
+      // Third wave - subtle background
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.25);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-length / 2, 0);
+      for (let x = -length / 2; x <= length / 2; x += 2) {
+        ctx.lineTo(x, Math.sin(x * frequency * 0.8 + phaseShift + Math.PI / 2) * amplitude * 0.4);
+      }
+      ctx.stroke();
       break;
     }
     case "arc": {
+      // Glow arc
+      if (enableGlow) {
+        ctx.strokeStyle = hexToRgba(color, alpha * 0.15);
+        ctx.lineWidth = 14;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(0, 0, animatedSize / 2, Math.PI, 2 * Math.PI);
+        ctx.stroke();
+      }
+
+      // Main arc - bright
       ctx.strokeStyle = hexToRgba(color, alpha);
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 5;
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.arc(0, 0, animatedSize / 2, Math.PI, 2 * Math.PI);
       ctx.stroke();
 
-      // Second arc
-      ctx.strokeStyle = hexToRgba(color, alpha * 0.5);
+      // White highlight arc
+      ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.4);
       ctx.lineWidth = 2;
       ctx.beginPath();
+      ctx.arc(0, -2, animatedSize / 2, Math.PI, 2 * Math.PI);
+      ctx.stroke();
+
+      // Second arc
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.6);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
       ctx.arc(0, animatedSize * 0.15, animatedSize / 2 * 0.7, Math.PI, 2 * Math.PI);
+      ctx.stroke();
+
+      // Third arc - smallest
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.35);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, animatedSize * 0.28, animatedSize / 2 * 0.5, Math.PI, 2 * Math.PI);
       ctx.stroke();
       break;
     }
@@ -443,44 +532,67 @@ function drawShape(
       const animatedRotation = shape.rotation + time * shape.rotationSpeed;
       ctx.rotate(animatedRotation);
 
-      // Glow
+      const h = animatedSize;
+      const w = animatedSize * 0.8;
+
+      // Multiple glow layers
       if (enableGlow) {
-        ctx.fillStyle = hexToRgba(color, alpha * 0.2);
-        const hGlow = animatedSize * 1.2;
-        const wGlow = animatedSize * 1.0;
+        ctx.fillStyle = hexToRgba(color, alpha * 0.08);
+        const h3 = h * 1.5;
+        const w3 = w * 1.5;
         ctx.beginPath();
-        ctx.moveTo(0, -hGlow / 2);
-        ctx.lineTo(wGlow / 2, hGlow / 2);
-        ctx.lineTo(-wGlow / 2, hGlow / 2);
+        ctx.moveTo(0, -h3 / 2);
+        ctx.lineTo(w3 / 2, h3 / 2);
+        ctx.lineTo(-w3 / 2, h3 / 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = hexToRgba(color, alpha * 0.2);
+        const h2 = h * 1.25;
+        const w2 = w * 1.25;
+        ctx.beginPath();
+        ctx.moveTo(0, -h2 / 2);
+        ctx.lineTo(w2 / 2, h2 / 2);
+        ctx.lineTo(-w2 / 2, h2 / 2);
         ctx.closePath();
         ctx.fill();
       }
 
-      ctx.fillStyle = hexToRgba(color, alpha);
+      // Triangle with gradient
+      const triGrad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+      triGrad.addColorStop(0, hexToRgba("#ffffff", alpha * 0.5));
+      triGrad.addColorStop(0.3, hexToRgba(color, alpha));
+      triGrad.addColorStop(1, hexToRgba(color, alpha * 0.7));
+      ctx.fillStyle = triGrad;
       ctx.beginPath();
-      const h = animatedSize;
-      const w = animatedSize * 0.8;
       ctx.moveTo(0, -h / 2);
       ctx.lineTo(w / 2, h / 2);
       ctx.lineTo(-w / 2, h / 2);
       ctx.closePath();
       ctx.fill();
 
-      // Edge highlight
-      ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.3);
-      ctx.lineWidth = 1;
+      // Bright edge highlights
+      ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.5);
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, -h / 2);
       ctx.lineTo(-w / 2, h / 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.8);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, -h / 2);
+      ctx.lineTo(w / 2, h / 2);
       ctx.stroke();
       break;
     }
     case "dot": {
       if (shape.dots) {
-        // Connecting lines between dots
+        // Connecting lines between dots - brighter
         if (enableGlow && shape.dots.length > 1) {
-          ctx.strokeStyle = hexToRgba(color, alpha * 0.2);
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = hexToRgba(color, alpha * 0.35);
+          ctx.lineWidth = 2;
           for (let i = 0; i < shape.dots.length - 1; i++) {
             ctx.beginPath();
             ctx.moveTo(shape.dots[i].dx, shape.dots[i].dy);
@@ -489,11 +601,29 @@ function drawShape(
           }
         }
 
-        ctx.fillStyle = hexToRgba(color, alpha);
         for (const dot of shape.dots) {
-          const dotPulse = 1 + Math.sin(time * 0.003 + dot.dx * 0.1) * 0.2;
+          const dotPulse = 1 + Math.sin(time * 0.003 + dot.dx * 0.1) * 0.25;
+          const dotR = dot.r * dotPulse;
+
+          // Glow around each dot
+          if (enableGlow) {
+            ctx.fillStyle = hexToRgba(color, alpha * 0.15);
+            ctx.beginPath();
+            ctx.arc(dot.dx, dot.dy, dotR + 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Main dot with gradient
+          const dotGrad = ctx.createRadialGradient(
+            dot.dx - dotR * 0.2, dot.dy - dotR * 0.2, 0,
+            dot.dx, dot.dy, dotR
+          );
+          dotGrad.addColorStop(0, hexToRgba("#ffffff", alpha * 0.6));
+          dotGrad.addColorStop(0.4, hexToRgba(color, alpha));
+          dotGrad.addColorStop(1, hexToRgba(color, alpha * 0.7));
+          ctx.fillStyle = dotGrad;
           ctx.beginPath();
-          ctx.arc(dot.dx, dot.dy, dot.r * dotPulse, 0, Math.PI * 2);
+          ctx.arc(dot.dx, dot.dy, dotR, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -503,19 +633,34 @@ function drawShape(
       const animatedRotation = shape.rotation + time * shape.rotationSpeed * 2;
       ctx.rotate(animatedRotation);
 
-      // Glow
+      const outerR = animatedSize / 2;
+      const innerR = outerR * 0.4;
+
+      // Multiple glow layers for intense bloom effect
       if (enableGlow) {
-        ctx.fillStyle = hexToRgba(color, alpha * 0.15);
+        ctx.fillStyle = hexToRgba(color, alpha * 0.06);
         ctx.beginPath();
-        const outerGlow = animatedSize / 2 + 12;
-        ctx.arc(0, 0, outerGlow, 0, Math.PI * 2);
+        ctx.arc(0, 0, outerR + 35, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = hexToRgba(color, alpha * 0.12);
+        ctx.beginPath();
+        ctx.arc(0, 0, outerR + 20, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = hexToRgba(color, alpha * 0.2);
+        ctx.beginPath();
+        ctx.arc(0, 0, outerR + 8, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      ctx.fillStyle = hexToRgba(color, alpha);
+      // Star with gradient
+      const starGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, outerR);
+      starGrad.addColorStop(0, hexToRgba("#ffffff", alpha));
+      starGrad.addColorStop(0.3, hexToRgba(color, alpha));
+      starGrad.addColorStop(1, hexToRgba(color, alpha * 0.7));
+      ctx.fillStyle = starGrad;
       ctx.beginPath();
-      const outerR = animatedSize / 2;
-      const innerR = outerR * 0.4;
       for (let i = 0; i < 12; i++) {
         const r = i % 2 === 0 ? outerR : innerR;
         const angle = (i * Math.PI) / 6 - Math.PI / 2;
@@ -527,13 +672,15 @@ function drawShape(
       ctx.closePath();
       ctx.fill();
 
-      // Center glow
-      const centerGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, innerR);
-      centerGrad.addColorStop(0, hexToRgba("#ffffff", alpha * 0.6));
+      // Intense center glow - white hot center
+      const centerGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, innerR * 1.5);
+      centerGrad.addColorStop(0, hexToRgba("#ffffff", alpha));
+      centerGrad.addColorStop(0.3, hexToRgba("#ffffff", alpha * 0.6));
+      centerGrad.addColorStop(0.6, hexToRgba(color, alpha * 0.3));
       centerGrad.addColorStop(1, "transparent");
       ctx.fillStyle = centerGrad;
       ctx.beginPath();
-      ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+      ctx.arc(0, 0, innerR * 1.5, 0, Math.PI * 2);
       ctx.fill();
       break;
     }
