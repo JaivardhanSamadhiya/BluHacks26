@@ -12,12 +12,17 @@ export default function ContactPage() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const subjectLabels: Record<string, string> = {
+    feedback: "Feedback",
+    bug: "Bug Report",
+    feature: "Feature Request",
+    other: "Other",
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError(null);
 
     try {
       const response = await fetch("/api/contact", {
@@ -32,8 +37,13 @@ export default function ContactPage() {
       }
 
       setIsSubmitted(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+    } catch {
+      // Fallback to mailto if API fails
+      const subjectText = `[EmotiArt ${subjectLabels[formData.subject] || formData.subject}] Message from ${formData.name}`;
+      const bodyText = `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`;
+      const mailtoLink = `mailto:jaisamadhiya@gmail.com?subject=${encodeURIComponent(subjectText)}&body=${encodeURIComponent(bodyText)}`;
+      window.location.href = mailtoLink;
+      setIsSubmitted(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -186,12 +196,6 @@ export default function ContactPage() {
                   placeholder="Tell us what's on your mind..."
                 />
               </div>
-
-              {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-sans">
-                  {error}
-                </div>
-              )}
 
               <button
                 type="submit"

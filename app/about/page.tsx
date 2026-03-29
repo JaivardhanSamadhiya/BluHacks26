@@ -1,9 +1,40 @@
 import { Navbar } from "@/components/navbar";
 
-const features = [
+const textAnalysisFeatures = [
   {
     step: "01",
-    title: "Capture Your Emotion",
+    title: "Paste Your Text",
+    description:
+      "Copy and paste messages, journal entries, emails, or any text you want to analyze for emotional content.",
+    color: "#06AED4",
+  },
+  {
+    step: "02",
+    title: "Keyword Analysis",
+    description:
+      "Our algorithm scans your text for emotion-related keywords and phrases to determine the dominant emotional tone.",
+    color: "#FFD166",
+  },
+  {
+    step: "03",
+    title: "Generate Art",
+    description:
+      "Based on the detected emotion, EmotiArt creates unique visual artwork with shapes, colors, and patterns that represent the emotional content.",
+    color: "#9B72CF",
+  },
+  {
+    step: "04",
+    title: "Download & Share",
+    description:
+      "Save your personalized artwork as a high-resolution PNG and share your emotional analysis with others.",
+    color: "#FF6B9D",
+  },
+];
+
+const liveAnalysisFeatures = [
+  {
+    step: "01",
+    title: "Enable Camera & Mic",
     description:
       "Use your camera and microphone to let EmotiArt analyze your facial expressions and voice tone in real-time.",
     color: "#06AED4",
@@ -60,13 +91,47 @@ export default function AboutPage() {
           </p>
         </section>
 
-        {/* How It Works */}
+        {/* Text Analysis */}
         <section className="px-6 py-16 max-w-5xl mx-auto">
-          <h2 className="font-sans font-semibold text-2xl text-white mb-12 text-center">
-            How It Works
+          <h2 className="font-sans font-semibold text-2xl text-white mb-4 text-center">
+            Text Analysis
           </h2>
+          <p className="font-sans text-white/60 text-center mb-12 max-w-2xl mx-auto">
+            Analyze the emotional tone of messages, journal entries, or any written text.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {features.map((feature) => (
+            {textAnalysisFeatures.map((feature) => (
+              <div
+                key={feature.step}
+                className="p-6 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:border-white/[0.12] transition-colors"
+              >
+                <div
+                  className="font-mono text-sm font-medium mb-3"
+                  style={{ color: feature.color }}
+                >
+                  {feature.step}
+                </div>
+                <h3 className="font-sans font-semibold text-lg text-white mb-2">
+                  {feature.title}
+                </h3>
+                <p className="font-sans text-sm text-white/50 leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Live Analysis */}
+        <section className="px-6 py-16 max-w-5xl mx-auto">
+          <h2 className="font-sans font-semibold text-2xl text-white mb-4 text-center">
+            Live Analysis
+          </h2>
+          <p className="font-sans text-white/60 text-center mb-12 max-w-2xl mx-auto">
+            Use your camera and microphone for real-time emotion detection powered by AI.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {liveAnalysisFeatures.map((feature) => (
               <div
                 key={feature.step}
                 className="p-6 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:border-white/[0.12] transition-colors"
@@ -116,12 +181,20 @@ export default function AboutPage() {
 
         {/* CTA */}
         <section className="px-6 py-20 text-center">
-          <a
-            href="/"
-            className="inline-flex items-center justify-center h-12 px-8 bg-white text-black font-sans font-semibold text-sm rounded-lg hover:opacity-90 active:scale-[0.98] transition-all duration-150"
-          >
-            Start Creating Art
-          </a>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="/text-analysis"
+              className="inline-flex items-center justify-center h-12 px-8 bg-white text-black font-sans font-semibold text-sm rounded-lg hover:opacity-90 active:scale-[0.98] transition-all duration-150"
+            >
+              Try Text Analysis
+            </a>
+            <a
+              href="/"
+              className="inline-flex items-center justify-center h-12 px-8 bg-[#06AED4] text-black font-sans font-semibold text-sm rounded-lg hover:opacity-90 active:scale-[0.98] transition-all duration-150"
+            >
+              Try Live Analysis
+            </a>
+          </div>
         </section>
       </main>
     </div>
