@@ -58,14 +58,17 @@ export function synthesize(
   const { emotion: finalEmotion, dist: minDist } = closestEmotion(blendedValence, blendedArousal);
 
   const labelsDiffer = face.emotion !== voice.emotion;
-  const conflict     = labelsDiffer && minDist > CONFLICT_THRESHOLD;
-  const conflictBlend = conflict ? Math.min(0.5, minDist * 0.7) : 0;
+  // Always show secondary emotion when face and voice differ (not just on large distance)
+  const conflict     = labelsDiffer;
+  const conflictBlend = labelsDiffer ? Math.min(0.5, minDist * 0.7) : 0;
 
   // Intensity: distance from center, boosted by voice energy
   const rawIntensity = Math.sqrt(blendedValence ** 2 + blendedArousal ** 2) / Math.sqrt(2);
   const intensity    = Math.min(1, rawIntensity * 0.7 + voice.energy * 0.3);
 
-  const secondaryEmotion = wFace >= wVoice ? voice.emotion : face.emotion;
+  // Secondary emotion: the one with less confidence gets shown as secondary
+  // Usually face emotion since voice is weighted 70%
+  const secondaryEmotion = voice.confidence >= face.confidence ? face.emotion : voice.emotion;
 
   // Blend ratio: bias toward speech (70%) vs face (30%)
   const SPEECH_WEIGHT = 0.7;

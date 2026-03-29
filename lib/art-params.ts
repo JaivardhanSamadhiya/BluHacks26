@@ -24,7 +24,7 @@ function lerp([lo, hi]: [number, number], t: number) {
 }
 
 export function buildArtParams(synthesis: SynthesisResult): ArtParams {
-  const { emotion, intensity, conflict, conflictBlend, secondaryEmotion, blendRatio } = synthesis;
+  const { emotion, intensity, conflict, conflictBlend, secondaryEmotion, blendRatio = 1 } = synthesis;
 
   const totalShapeCount = Math.round(lerp(INTENSITY_SCALE.shapeCount, intensity));
   const primaryShapeCount = Math.round(totalShapeCount * blendRatio);
