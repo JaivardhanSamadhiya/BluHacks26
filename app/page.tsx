@@ -69,10 +69,20 @@ export default function EmotiArtPage() {
   }, [setEmotion, setTranscript, setListening, generate, processGeminiResult]);
 
   return (
-    <main className="h-screen w-screen flex flex-col lg:flex-row overflow-hidden bg-[#0d0d0f]">
-      {/* Mobile: Canvas on top */}
-      <div className="flex-1 lg:order-2 min-h-[50vh] lg:min-h-0">
-        <ArtCanvas
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#0d0d0f]">
+      {/* Header */}
+      <header className="h-14 flex-shrink-0 flex items-center px-5 border-b border-white/[0.07] bg-[#0d0d0f]">
+        <h1 className="font-sans font-bold text-xl tracking-tight">
+          <span className="text-[#06AED4]">Emoti</span>
+          <span className="text-white">Art</span>
+        </h1>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Mobile: Canvas on top */}
+        <div className="flex-1 lg:order-2 min-h-[50vh] lg:min-h-0">
+          <ArtCanvas
           ref={canvasRef}
           emotion={state.activeEmotion}
           isGenerated={state.isGenerated}
@@ -99,7 +109,8 @@ export default function EmotiArtPage() {
           Generate Art
         </button>
       </aside>
-    </main>
+      </main>
+    </div>
   );
 }
 
