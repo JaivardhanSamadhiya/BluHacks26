@@ -18,6 +18,7 @@ export interface SynthesisResult {
   conflict: boolean;
   conflictBlend: number;
   secondaryEmotion: EmotionKey;
+  blendRatio: number;
 }
 
 function closestEmotion(valence: number, arousal: number): { emotion: EmotionKey; dist: number } {
@@ -66,11 +67,17 @@ export function synthesize(
 
   const secondaryEmotion = wFace >= wVoice ? voice.emotion : face.emotion;
 
+  // Blend ratio: bias toward speech (70%) vs face (30%)
+  const SPEECH_WEIGHT = 0.7;
+  const FACE_WEIGHT = 0.3;
+  const blendRatio = Math.min(1, Math.max(0, (voice.confidence * SPEECH_WEIGHT) + (face.confidence * FACE_WEIGHT)));
+
   return {
     emotion: finalEmotion,
     intensity: Math.round(intensity * 100) / 100,
     conflict,
     conflictBlend: Math.round(conflictBlend * 100) / 100,
     secondaryEmotion,
+    blendRatio: Math.round(blendRatio * 100) / 100,
   };
 }

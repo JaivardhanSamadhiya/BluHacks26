@@ -24,16 +24,23 @@ function lerp([lo, hi]: [number, number], t: number) {
 }
 
 export function buildArtParams(synthesis: SynthesisResult): ArtParams {
-  const { emotion, intensity, conflict, conflictBlend, secondaryEmotion } = synthesis;
+  const { emotion, intensity, conflict, conflictBlend, secondaryEmotion, blendRatio } = synthesis;
+
+  const totalShapeCount = Math.round(lerp(INTENSITY_SCALE.shapeCount, intensity));
+  const primaryShapeCount = Math.round(totalShapeCount * blendRatio);
+  const secondaryShapeCount = totalShapeCount - primaryShapeCount;
 
   return {
-    primary:        EMOTION_ART[emotion],
-    secondary:      conflict ? EMOTION_ART[secondaryEmotion] : null,
-    shapeCount:     Math.round(lerp(INTENSITY_SCALE.shapeCount, intensity)),
-    sizeMin:        Math.round(lerp(INTENSITY_SCALE.sizeMin,    intensity) * 10) / 10,
-    sizeMax:        Math.round(lerp(INTENSITY_SCALE.sizeMax,    intensity) * 10) / 10,
-    opacityMin:     Math.round(lerp(INTENSITY_SCALE.opacityMin, intensity) * 100) / 100,
-    opacityMax:     Math.round(lerp(INTENSITY_SCALE.opacityMax, intensity) * 100) / 100,
-    secondaryRatio: conflictBlend,
+    primary:               EMOTION_ART[emotion],
+    secondary:             conflict ? EMOTION_ART[secondaryEmotion] : null,
+    shapeCount:            totalShapeCount,
+    sizeMin:               Math.round(lerp(INTENSITY_SCALE.sizeMin,    intensity) * 10) / 10,
+    sizeMax:               Math.round(lerp(INTENSITY_SCALE.sizeMax,    intensity) * 10) / 10,
+    opacityMin:            Math.round(lerp(INTENSITY_SCALE.opacityMin, intensity) * 100) / 100,
+    opacityMax:            Math.round(lerp(INTENSITY_SCALE.opacityMax, intensity) * 100) / 100,
+    secondaryRatio:        conflictBlend,
+    primaryShapeCount:     primaryShapeCount,
+    secondaryShapeCount:   secondaryShapeCount,
+    secondaryOpacityScale: 0.4,
   };
 }
