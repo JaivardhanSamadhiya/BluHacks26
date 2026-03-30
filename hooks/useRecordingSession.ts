@@ -81,9 +81,11 @@ function aggregateEmotions(frames: EmotionFrame[]): { emotion: EmotionKey; inten
     }
   }
 
-  // Intensity: average confidence across all frames
+  // Intensity: average confidence across all frames, boosted so it reads higher
+  // Raw face-api values are naturally low (0.1–0.3), so we scale and floor them
   const avgConfidence = frames.reduce((sum, f) => sum + f.confidence, 0) / frames.length;
-  const intensity = Math.min(1, avgConfidence);
+  const boosted = 0.55 + avgConfidence * 1.4; // floor at 55%, scale up
+  const intensity = Math.min(1, boosted);
 
   return { emotion: topEmotion, intensity };
 }
