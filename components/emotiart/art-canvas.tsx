@@ -349,13 +349,18 @@ function drawShape(
   time: number,
   enableGlow: boolean = true
 ) {
-  // Pulse animation
-  const pulseScale = 1 + Math.sin(time * 0.002 * shape.pulseSpeed + shape.pulsePhase) * 0.08;
+  // Pulse animation - calmer for waves
+  const isCalm = shape.shapeType === "wave";
+  const pulseTimeMultiplier = isCalm ? 0.0005 : 0.002;
+  const pulseAmount = isCalm ? 0.03 : 0.08;
+  const pulseScale = 1 + Math.sin(time * pulseTimeMultiplier * shape.pulseSpeed + shape.pulsePhase) * pulseAmount;
   const animatedSize = shape.size * pulseScale;
-
-  // Position animation (subtle drift)
-  const animX = shape.x + Math.sin(time * 0.001 + shape.pulsePhase) * 3;
-  const animY = shape.y + Math.cos(time * 0.0012 + shape.pulsePhase) * 3;
+  
+  // Position animation (subtle drift) - calmer for waves
+  const driftSpeed = isCalm ? 0.0003 : 0.001;
+  const driftAmount = isCalm ? 1.5 : 3;
+  const animX = shape.x + Math.sin(time * driftSpeed + shape.pulsePhase) * driftAmount;
+  const animY = shape.y + Math.cos(time * driftSpeed * 1.2 + shape.pulsePhase) * driftAmount;
 
   const alpha = shape.opacity * progress;
   const { shapeType, color } = shape;
@@ -424,18 +429,20 @@ function drawShape(
       break;
     }
     case "wave": {
-      const animatedRotation = shape.rotation + time * shape.rotationSpeed;
-      ctx.rotate(animatedRotation);
+      // NO rotation for calm waves - just gentle horizontal drift
+      // Slow horizontal offset based on time for gentle side-to-side movement
+      const horizontalDrift = Math.sin(time * 0.0003 + shape.pulsePhase) * 20;
+      ctx.translate(horizontalDrift, 0);
       
-      const amplitude = animatedSize * 0.35;
-      const frequency = 0.04 + Math.sin(time * 0.001) * 0.01;
-      const phaseShift = time * 0.003;
-      const length = animatedSize * 2.5;
+      const amplitude = animatedSize * 0.3;
+      const frequency = 0.035; // Fixed, gentle frequency
+      const phaseShift = time * 0.0008; // Very slow phase shift for gentle undulation
+      const length = animatedSize * 3;
 
       // Glow wave (wide, soft)
       if (enableGlow) {
-        ctx.strokeStyle = hexToRgba(color, alpha * 0.15);
-        ctx.lineWidth = 12;
+        ctx.strokeStyle = hexToRgba(color, alpha * 0.12);
+        ctx.lineWidth = 16;
         ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(-length / 2, 0);
@@ -445,9 +452,9 @@ function drawShape(
         ctx.stroke();
       }
 
-      // Main wave - bright
+      // Main wave - smooth and calm
       ctx.strokeStyle = hexToRgba(color, alpha);
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(-length / 2, 0);
@@ -456,33 +463,23 @@ function drawShape(
       }
       ctx.stroke();
 
-      // White highlight on top
-      ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.4);
+      // Soft white highlight on top
+      ctx.strokeStyle = hexToRgba("#ffffff", alpha * 0.25);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-length / 2, 0);
+      for (let x = -length / 2; x <= length / 2; x += 2) {
+        ctx.lineTo(x, Math.sin(x * frequency + phaseShift) * amplitude - 1.5);
+      }
+      ctx.stroke();
+
+      // Second wave layer - gentler, offset phase
+      ctx.strokeStyle = hexToRgba(color, alpha * 0.4);
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(-length / 2, 0);
       for (let x = -length / 2; x <= length / 2; x += 2) {
-        ctx.lineTo(x, Math.sin(x * frequency + phaseShift) * amplitude - 2);
-      }
-      ctx.stroke();
-
-      // Second wave layer
-      ctx.strokeStyle = hexToRgba(color, alpha * 0.5);
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-length / 2, 0);
-      for (let x = -length / 2; x <= length / 2; x += 2) {
-        ctx.lineTo(x, Math.sin(x * frequency + phaseShift + Math.PI) * amplitude * 0.6);
-      }
-      ctx.stroke();
-
-      // Third wave - subtle background
-      ctx.strokeStyle = hexToRgba(color, alpha * 0.25);
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-length / 2, 0);
-      for (let x = -length / 2; x <= length / 2; x += 2) {
-        ctx.lineTo(x, Math.sin(x * frequency * 0.8 + phaseShift + Math.PI / 2) * amplitude * 0.4);
+        ctx.lineTo(x, Math.sin(x * frequency + phaseShift + Math.PI * 0.5) * amplitude * 0.5);
       }
       ctx.stroke();
       break;
