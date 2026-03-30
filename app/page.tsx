@@ -97,13 +97,6 @@ export default function EmotiArtPage() {
             confidence={state.confidence}
           />
           <VisualGuidePanel />
-
-          <button
-            onClick={generate}
-            className="w-full h-11 bg-white text-black font-sans font-semibold text-sm rounded-lg hover:opacity-88 active:scale-[0.98] transition-all duration-150"
-          >
-            Generate Art
-          </button>
         </aside>
       </main>
     </div>

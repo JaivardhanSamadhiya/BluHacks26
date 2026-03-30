@@ -1,6 +1,6 @@
 # EmotiArt
 
-EmotiArt transforms your emotions into abstract procedural art in real time. It detects emotions through your camera (facial expressions) or typed text, then generates unique canvas-based artwork that visually represents how you feel.
+EmotiArt transforms your emotions into vibrant, dynamic abstract art in real time. It detects emotions through your camera (facial expressions) or typed text, then generates unique animated canvas artwork that visually represents how you feel.
 
 Built for BluHacks 2026.
 
@@ -8,7 +8,7 @@ Built for BluHacks 2026.
 
 ## What It Does
 
-**Live Analysis** — Point your camera at your face. EmotiArt uses on-device facial expression recognition (`@vladmandic/face-api`) to detect your emotion and continuously update the generated artwork as your expression changes. No data leaves your device.
+**Live Analysis** — Point your camera at your face. EmotiArt uses on-device facial expression recognition (`@vladmandic/face-api`) to detect your emotion and continuously update the generated artwork as your expression changes. No data leaves your device. Watch as the art responds instantly with vibrant colors, animated shapes, and dynamic motion that reflects your emotional state.
 
 **Text Analysis** — Paste a message, journal entry, or anything you've written. EmotiArt scans it for emotional keywords and generates art matching the dominant emotion it finds.
 
@@ -16,15 +16,15 @@ Built for BluHacks 2026.
 
 ## The Seven Emotions
 
-| Emotion | Color | Shape |
-|---------|-------|-------|
-| Happy | `#FFD166` yellow | Circles with outer rings |
-| Calm | `#06AED4` cyan | Sine wave strokes |
-| Sad | `#9B72CF` purple | Downward arcs |
-| Angry | `#EF233C` red | Sharp triangles |
-| Anxious | `#F4A261` orange | Scattered dot clusters |
-| Excited | `#FF6B9D` pink | 6-point starbursts |
-| Overwhelmed | `#8ECAE6` light blue | Overlapping rectangles |
+| Emotion | Color | Shape | Motion |
+|---------|-------|-------|--------|
+| Happy | `#FFE747` bright yellow | Circles with glow rings | Pulsing, energetic movement |
+| Calm | `#00E5FF` vibrant cyan | Gentle sine waves | Slow horizontal drift, minimal rotation |
+| Sad | `#B388FF` vivid purple | Downward arcs | Gentle floating motion |
+| Angry | `#FF1744` vibrant red | Sharp triangles | Controlled sway with moderate drift |
+| Anxious | `#FFAB40` bright orange | Scattered dot clusters | Jittery, connected dots with network lines |
+| Excited | `#FF4081` hot pink | 6-point starbursts | Fast rotation and pulsing |
+| Overwhelmed | `#40C4FF` bright blue | Overlapping rectangles | Chaotic, overlapping layers |
 
 ---
 
