@@ -1,6 +1,6 @@
 # EmotiArt
 
-EmotiArt transforms your emotions into vibrant, dynamic abstract art in real time. It detects emotions through your camera (facial expressions) or typed text, then generates unique animated canvas artwork that visually represents how you feel.
+EmotiArt transforms emotions into vibrant, dynamic abstract art in real time. It detects emotions through your camera (facial expressions) or typed text, then generates unique animated canvas artwork that visually represents how you feel.
 
 Built for BluHacks 2026.
 
