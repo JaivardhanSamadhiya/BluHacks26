@@ -176,7 +176,7 @@ function buildShapes(opts: GenOptions, width: number, height: number): Shape[] {
     return order[a.layer] - order[b.layer];
   });
 }
-
+/*Randomized shapes*/
 function generateParticles(color: string, width: number, height: number, count: number): Particle[] {
   return Array.from({ length: count }, () => ({
     x: Math.random() * width,
