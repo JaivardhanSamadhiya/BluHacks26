@@ -102,7 +102,7 @@ export default function EmotiArtPage() {
     </div>
   );
 }
-
+/* Extends the global Window type so TypeScript knows about window.EmotiArt*/
 declare global {
   interface Window {
     EmotiArt: {
